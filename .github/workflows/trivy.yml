@@ -47,6 +47,7 @@ jobs:
           format: 'sarif'                             # report format GitHub understands
           output: 'trivy-results.sarif'               # the report file to create
           severity: 'CRITICAL'                        # only treat CRITICAL issues as failures
+          limit-severities-for-sarif: true            # make the severity setting apply to the SARIF report too
           exit-code: '1'                              # fail the run if any are found
           ignore-unfixed: true                        # skip problems that have no fix yet
 
