@@ -1,0 +1,60 @@
+# Trivy security scan
+# Builds the Docker image and scans it for known vulnerabilities.
+# The run FAILS if a CRITICAL vulnerability (with a fix available) is found.
+# Note: aquasecurity/trivy-action is a third-party action, so it is pinned to a
+# full commit ID (v0.35.0) instead of a version tag, for supply chain safety.
+
+name: trivy
+
+# WHEN the workflow runs
+on:
+  push:
+    branches: [ "main" ]          # every push to main
+  pull_request:
+    branches: [ "main" ]          # every pull request into main
+  schedule:
+    - cron: '40 4 * * 0'          # weekly, Sundays at 04:40, to catch new vulnerabilities
+
+# Default permissions: read-only access to the repo (least privilege)
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Extra permissions needed only by this job
+    permissions:
+      contents: read              # download the code
+      security-events: write      # upload results to the Security tab
+      actions: read               # needed by the upload step
+    name: Build
+    runs-on: ubuntu-latest        # a fresh Linux machine provided by GitHub
+    steps:
+      # Step 1: download the repository code onto the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: build the image from the Dockerfile.
+      # "scan-image" is a local name that only exists on this runner.
+      - name: Build an image from Dockerfile
+        run: |
+          docker build -t scan-image:${{ github.sha }} .
+
+      # Step 3: scan the image with Trivy
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: 'scan-image:${{ github.sha }}'   # the image built in step 2
+          format: 'sarif'                             # report format GitHub understands
+          output: 'trivy-results.sarif'               # the report file to create
+          severity: 'CRITICAL'                        # only treat CRITICAL issues as failures
+          limit-severities-for-sarif: true            # make the severity setting apply to the SARIF report too
+          exit-code: '1'                              # fail the run if any are found
+          ignore-unfixed: true                        # skip problems that have no fix yet
+
+      # Step 4: send the report to the repo's Security tab.
+      # "always()" means this runs even if the scan step failed.
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
