@@ -1,11 +1,11 @@
 # Deploy stage: Terraform deploys the published Docker image to a temporary
 # Kubernetes cluster (Minikube) on the GitHub runner, then checks /health.
-name: Deploy
+name: "Deploy: Terraform and Kubernetes"
 
 on:
   # Runs automatically after the "Docker" workflow finishes on main
   workflow_run:
-    workflows: ["Docker"]
+    workflows: ["Build: Docker image"]
     types: [completed]
     branches: [main]
   # Lets you start it by hand from the Actions tab (good for the demo)
