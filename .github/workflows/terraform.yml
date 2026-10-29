@@ -1,0 +1,53 @@
+# Deploy stage: Terraform deploys the published Docker image to a temporary
+# Kubernetes cluster (Minikube) on the GitHub runner, then checks /health.
+name: Deploy
+
+on:
+  # Runs automatically after the "Docker" workflow finishes on main
+  workflow_run:
+    workflows: ["Docker"]
+    types: [completed]
+    branches: [main]
+  # Lets you start it by hand from the Actions tab (good for the demo)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if the image was published successfully (or if started by hand)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Start a temporary Kubernetes cluster (Minikube)
+        uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Terraform apply (deploys the app)
+        working-directory: terraform
+        run: terraform apply -auto-approve
+
+      - name: Show what is running
+        run: kubectl get pods,svc
+
+      - name: Health check (pipeline feedback)
+        run: |
+          kubectl port-forward svc/mini-pipeline 8080:80 &
+          sleep 5
+          curl --fail http://localhost:8080/health
