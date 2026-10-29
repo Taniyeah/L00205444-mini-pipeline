@@ -4,7 +4,7 @@
 # Note: aquasecurity/trivy-action is a third-party action, so it is pinned to a
 # full commit ID (v0.35.0) instead of a version tag, for supply chain safety.
 
-name: trivy
+name: "Security: image scan (Trivy)"
 
 # WHEN the workflow runs
 on:
