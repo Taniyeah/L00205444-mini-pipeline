@@ -23,7 +23,7 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('Hello from my mini DevOps pipeline! v2');
+  res.send('Hello from my mini DevOps pipeline! v3');
 });
 
 app.get('/health', (req, res) => {
